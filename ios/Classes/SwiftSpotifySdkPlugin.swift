@@ -17,7 +17,6 @@ public class SwiftSpotifySdkPlugin: NSObject, FlutterPlugin {
         playerContextChannel = FlutterEventChannel(name: "player_context_subscription", binaryMessenger: registrar.messenger())
 
         let instance = SwiftSpotifySdkPlugin()
-        registrar.addApplicationDelegate(instance)
         registrar.addMethodCallDelegate(instance, channel: spotifySDKChannel)
 
         instance.connectionStatusHandler = ConnectionStatusHandler()
@@ -289,48 +288,5 @@ public class SwiftSpotifySdkPlugin: NSObject, FlutterPlugin {
         if self.appRemote?.authorizeAndPlayURI("", asRadio: asRadio ?? false, additionalScopes: scopes) == false {
             throw SpotifyError.spotifyNotInstalledError
         }
-    }
-}
-
-extension SwiftSpotifySdkPlugin {
-    public func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        setAccessTokenFromURL(url: url)
-        return true
-    }
-
-    public func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]) -> Void) -> Bool {
-        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-            let url = userActivity.webpageURL
-            else {
-                connectionStatusHandler?.connectionResult?(FlutterError(code: "errorConnecting", message: "client id or redirectUrl is invalid", details: nil))
-                connectionStatusHandler?.tokenResult?(FlutterError(code: "errorConnecting", message: "client id or redirectUrl is invalid", details: nil))
-                connectionStatusHandler?.connectionResult = nil
-                connectionStatusHandler?.tokenResult = nil
-                return false
-        }
-
-        setAccessTokenFromURL(url: url)
-        return true
-    }
-
-    private func setAccessTokenFromURL(url: URL) {
-        guard let appRemote = appRemote else {
-            connectionStatusHandler?.connectionResult?(FlutterError(code: "errorConnection", message: "AppRemote is null", details: nil))
-            connectionStatusHandler?.tokenResult?(FlutterError(code: "errorConnection", message: "AppRemote is null", details: nil))
-            connectionStatusHandler?.connectionResult = nil
-            connectionStatusHandler?.tokenResult = nil
-            return
-        }
-
-        guard let token = appRemote.authorizationParameters(from: url)?[SPTAppRemoteAccessTokenKey] else {
-            connectionStatusHandler?.connectionResult?(FlutterError(code: "authenticationTokenError", message: appRemote.authorizationParameters(from: url)?[SPTAppRemoteErrorDescriptionKey], details: nil))
-            connectionStatusHandler?.tokenResult?(FlutterError(code: "authenticationTokenError", message: appRemote.authorizationParameters(from: url)?[SPTAppRemoteErrorDescriptionKey], details: nil))
-            connectionStatusHandler?.connectionResult = nil
-            connectionStatusHandler?.tokenResult = nil
-            return
-        }
-
-        appRemote.connectionParameters.accessToken = token
-        appRemote.connect()
     }
 }
